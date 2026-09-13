@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Jump Adventure - Melhorado</title>
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    background: #111;
+    font-family: 'Arial', sans-serif;
+    overflow: hidden;
+}
+
+#game {
+    width: 100vw;
+    height: 100vh;
+    max-width: 900px;
+    margin: auto;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    transition: background 0.3s ease;
+}
+
+#game.level2 {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+#game.level3 {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+/* CÉU - NUVENS ANIMADAS */
+.cloud {
+    position: absolute;
+    font-size: 50px;
+    opacity: 0.7;
+    animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+}
+
+/* PONTUAÇÃO */
+#score {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    font-size: 28px;
+    font-weight: bold;
+    color: white;
+    z-index: 10;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    animation: scoreUp 0.3s ease;
+}
+
+@keyframes scoreUp {
+    0% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+#best {
+    position: absolute;
+    top: 60px;
+    right: 20px;
+    font-size: 14px;
+    color: rgba(255,255,255,0.8);
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+#level {
+    position: absolute;
+    top: 100px;
+    right: 20px;
+    font-size: 14px;
+    color: rgba(255,255,255,0.8);
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+/* CHÃO */
+#ground {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 35%;
+    background: repeating-linear-gradient(
+        90deg,
+        #2d5016 0px,
+        #2d5016 30px,
+        #1f3a0a 30px,
+        #1f3a0a 60px
+    );
+    box-shadow: inset 0 5px 15px rgba(0,0,0,0.5);
+}
+
+/* PERSONAGEM */
+#player {
+    position: absolute;
+    bottom: 34%;
+    left: 12%;
+    width: 60px;
+    height: 60px;
+    font-size: 52px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 5;
+    transition: filter 0.2s ease;
+}
+
+#player.shield {
+    filter: drop-shadow(0 0 10px #FFD700);
+}
+
+#player.slow {
+    filter: drop-shadow(0 0 10px #00BFFF);
+    animation: slowPulse 0.5s ease infinite;
+}
+
+@keyframes slowPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* OBSTÁCULO */
+.obstacle {
+    position: absolute;
+    bottom: 34%;
+    font-size: 50px;
+    z-index: 4;
+    animation: obstacleSpawn 0.2s ease-out;
+}
+
+@keyframes obstacleSpawn {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* POWER-UP */
+.powerup {
+    position: absolute;
+    bottom: 34%;
+    font-size: 45px;
+    z-index: 4;
+    animation: powerupFloat 0.3s ease-out;
+}
+
+@keyframes powerupFloat {
+    0% { transform: scale(0) translateY(-20px); opacity: 0; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.powerup.pulse {
+    animation: powerupPulse 0.8s ease-in-out infinite;
+}
+
+@keyframes powerupPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+}
+
+/* TELA INICIAL */
+#menu {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    backdrop-filter: blur(5px);
+}
+
+.menu-box {
+    width: 85%;
+    max-width: 380px;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: white;
+    border-radius: 25px;
+    padding: 35px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+    border: 2px solid rgba(255,255,255,0.1);
+    animation: menuSlideIn 0.4s ease-out;
+}
+
+@keyframes menuSlideIn {
+    0% { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.menu-box h1 {
+    font-size: 36px;
+    margin-bottom: 15px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.menu-box p {
+    color: #ccc;
+    margin-bottom: 25px;
+    line-height: 1.6;
+    font-size: 15px;
+}
+
+.stats {
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 15px;
+    margin: 15px 0;
+    font-size: 14px;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.stats p {
+    margin: 5px 0;
+}
+
+#startButton {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+}
+
+#startButton:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 35px rgba(102, 126, 234, 0.6);
+}
+
+#startButton:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+#startButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* BOTÃO DE PULO MOBILE */
+#jumpButton {
+    position: absolute;
+    bottom: 30px;
+    right: 25px;
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.25);
+    color: white;
+    font-size: 35px;
+    z-index: 20;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    cursor: pointer;
+    border: 2px solid rgba(255,255,255,0.2);
+    transition: all 0.2s ease;
+}
+
+#jumpButton:hover {
+    background: rgba(255,255,255,0.35);
+    transform: scale(1.05);
+}
+
+#jumpButton:active {
+    transform: scale(0.9);
+}
+
+/* HUD - STATUS */
+#hud {
+    position: absolute;
+    bottom: 30px;
+    left: 20px;
+    background: rgba(0,0,0,0.3);
+    backdrop-filter: blur(10px);
+    padding: 15px 20px;
+    border-radius: 15px;
+    color: white;
+    font-size: 14px;
+    z-index: 20;
+    border: 1px solid rgba(255,255,255,0.2);
+    display: none;
+}
+
+#hud.active {
+    display: block;
+}
+
+.status-item {
+    margin: 5px 0;
+}
+
+.status-bar {
+    width: 100px;
+    height: 8px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    overflow: hidden;
+    display: inline-block;
+    margin-left: 10px;
+    vertical-align: middle;
+}
+
+.status-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00ff00, #ffff00);
+    width: 100%;
+}
+
+/* MENSAGENS */
+#message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 32px;
+    font-weight: bold;
+    color: white;
+    text-shadow: 2px 2px 8px rgba(0,0,0,0.8);
+    z-index: 15;
+    opacity: 0;
+    animation: messageShow 0.5s ease-out forwards;
+    pointer-events: none;
+}
+
+@keyframes messageShow {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+    50% { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* COMBO */
+#combo {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 24px;
+    font-weight: bold;
+    color: #FFD700;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    z-index: 10;
+    opacity: 0;
+    display: none;
+}
+
+#combo.active {
+    display: block;
+    animation: comboShow 0.3s ease-out;
+}
+
+@keyframes comboShow {
+    0% { opacity: 0; transform: translateX(-50%) scale(0.5); }
+    100% { opacity: 1; transform: translateX(-50%) scale(1); }
+}
+
+/* PARTÍCULAS */
+.particle {
+    position: absolute;
+    pointer-events: none;
+    font-size: 20px;
+}
+
+@keyframes particleFloat {
+    to {
+        transform: translateY(-100px) translateX(var(--tx));
+        opacity: 0;
+    }
+}
+
+/* RESPONSIVO */
+@media (max-width: 600px) {
+    .menu-box {
+        max-width: 90%;
+        padding: 20px;
+    }
+    
+    .menu-box h1 {
+        font-size: 28px;
+    }
+    
+    #score, #best, #level {
+        font-size: 16px;
+    }
+    
+    #jumpButton {
+        width: 80px;
+        height: 80px;
+        font-size: 30px;
+        bottom: 20px;
+        right: 15px;
+    }
+}
+</style>
+</head>
+<body>
+
+<div id="game">
+    <div id="score">⭐ 0</div>
+    <div id="best">🏆 Recorde: 0</div>
+    <div id="level">📊 Nível: 1</div>
+    
+    <div id="combo">🔥 COMBO x0</div>
+    
+    <div class="cloud" style="top:10%;left:10%;">☁️</div>
+    <div class="cloud" style="top:20%;left:70%;animation-delay:1s;">☁️</div>
+    <div class="cloud" style="top:15%;left:40%;animation-delay:2s;">☁️</div>
+    
+    <div id="player">🦊</div>
+    
+    <div id="ground"></div>
+    
+    <div id="hud" class="active">
+        <div class="status-item">Velocidade: <span class="status-bar"><span class="status-fill"></span></span></div>
+    </div>
+    
+    <button id="jumpButton">⬆️</button>
+    
+    <div id="menu">
+        <div class="menu-box">
+            <h1>🏃 JUMP ADVENTURE</h1>
+            <p>Pule os obstáculos, colete power-ups e sobreviva o máximo possível!</p>
+            
+            <div class="stats">
+                <p>🎮 Total de Jogos: <strong id="totalGames">0</strong></p>
+                <p>⭐ Melhor Pontuação: <strong id="bestScore">0</strong></p>
+                <p>📈 Total de Pontos: <strong id="totalScore">0</strong></p>
+                <p>🏆 Melhor Série: <strong id="bestStreak">0</strong></p>
+            </div>
+            
+            <button id="startButton">▶ JOGAR</button>
+        </div>
+    </div>
+</div>
+
+<script>
+/* =========================
+   ELEMENTOS
+========================= */
+const game = document.getElementById("game");
+const player = document.getElementById("player");
+const menu = document.getElementById("menu");
+const startButton = document.getElementById("startButton");
+const jumpButton = document.getElementById("jumpButton");
+const scoreText = document.getElementById("score");
+const bestText = document.getElementById("best");
+const levelText = document.getElementById("level");
+const comboText = document.getElementById("combo");
+const messageEl = document.getElementById("message");
+const hud = document.getElementById("hud");
+
+/* =========================
+   VARIÁVEIS DE JOGO
+========================= */
+let playing = false;
+let jumping = false;
+let score = 0;
+let speed = 7;
+let animationId = null;
+let obstacles = [];
+let powerups = [];
+let spawnTimer = null;
+let level = 1;
+let combo = 0;
+let maxCombo = 0;
+
+/* MODIFICADORES */
+let hasShield = false;
+let shieldTimer = null;
+let slowMode = false;
+let slowTimer = null;
+let bonusMultiplier = 1;
+
+/* =========================
+   ESTATÍSTICAS PERSISTENTES
+========================= */
+let stats = {
+    bestScore: Number(localStorage.getItem("jumpBest")) || 0,
+    totalGames: Number(localStorage.getItem("totalGames")) || 0,
+    totalScore: Number(localStorage.getItem("totalScore")) || 0,
+    bestStreak: Number(localStorage.getItem("bestStreak")) || 0
+};
+
+function updateStatsDisplay() {
+    document.getElementById("bestScore").innerText = stats.bestScore;
+    document.getElementById("totalScore").innerText = stats.totalScore;
+    bestText.innerText = "🏆 Recorde: " + stats.bestScore;
+}
+
+updateStatsDisplay();
+
+/* =========================
+   POWER-UPS
+========================= */
+const powerupTypes = {
+    shield: { emoji: "🛡️", name: "Escudo", duration: 5000 },
+    slowdown: { emoji: "❄️", name: "Desacelerador", duration: 5000 },
+    bonus: { emoji: "💎", name: "Bonus 2x", duration: 3000 }
+};
+
+function spawnPowerup() {
+    if (!playing || Math.random() > 0.15) return;
+    
+    const types = Object.keys(powerupTypes);
+    const type = types[Math.floor(Math.random() * types.length)];
+    const data = powerupTypes[type];
+    
+    const powerup = document.createElement("div");
+    powerup.className = "powerup pulse";
+    powerup.innerText = data.emoji;
+    powerup.style.left = game.clientWidth + "px";
+    powerup.dataset.type = type;
+    
+    game.appendChild(powerup);
+    
+    powerups.push({
+        element: powerup,
+        x: game.clientWidth,
+        type: type
+    });
+}
+
+function activatePowerup(type) {
+    const data = powerupTypes[type];
+    showMessage(data.emoji + " " + data.name + "!");
+    
+    switch(type) {
+        case "shield":
+            hasShield = true;
+            player.classList.add("shield");
+            clearTimeout(shieldTimer);
+            shieldTimer = setTimeout(() => {
+                hasShield = false;
+                player.classList.remove("shield");
+            }, data.duration);
+            break;
+            
+        case "slowdown":
+            slowMode = true;
+            player.classList.add("slow");
+            clearTimeout(slowTimer);
+            slowTimer = setTimeout(() => {
+                slowMode = false;
+                player.classList.remove("slow");
+            }, data.duration);
+            break;
+            
+        case "bonus":
+            bonusMultiplier = 2;
+            setTimeout(() => { bonusMultiplier = 1; }, data.duration);
+            break;
+    }
+}
+
+/* =========================
+   COMEÇAR
+========================= */
+startButton.addEventListener("click", startGame);
+
+function startGame() {
+    obstacles.forEach(obstacle => obstacle.element.remove());
+    powerups.forEach(powerup => powerup.element.remove());
+    
+    obstacles = [];
+    powerups = [];
+    score = 0;
+    speed = 7;
+    level = 1;
+    combo = 0;
+    maxCombo = 0;
+    playing = true;
+    jumping = false;
+    hasShield = false;
+    slowMode = false;
+    bonusMultiplier = 1;
+    
+    player.classList.remove("shield", "slow");
+    game.classList.remove("level2", "level3");
+    menu.style.display = "none";
+    comboText.classList.remove("active");
+    
+    stats.totalGames++;
+    localStorage.setItem("totalGames", stats.totalGames);
+    
+    gameLoop();
+    spawnObstacle();
+}
+
+/* =========================
+   PULO
+========================= */
+function jump() {
+    if (!playing) return;
+    if (jumping) return;
+    
+    jumping = true;
+    
+    let position = 0;
+    let velocity = 18;
+    const gravity = 0.9;
+    
+    function jumpLoop() {
+        velocity -= gravity;
+        position += velocity;
+        
+        if (position <= 0) {
+            position = 0;
+            jumping = false;
+            player.style.transform = "translateY(0px)";
+            return;
+        }
+        
+        player.style.transform = "translateY(-" + position + "px)";
+        requestAnimationFrame(jumpLoop);
+    }
+    
+    requestAnimationFrame(jumpLoop);
+}
+
+/* =========================
+   CRIAR OBSTÁCULO
+========================= */
+function spawnObstacle() {
+    if (!playing) return;
+    
+    const obstacle = document.createElement("div");
+    obstacle.className = "obstacle";
+    
+    const obstacleTypes = ["🌵", "🪨", "🪵", "🔥"];
+    obstacle.innerText = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
+    obstacle.style.left = game.clientWidth + "px";
+    
+    game.appendChild(obstacle);
+    
+    obstacles.push({
+        element: obstacle,
+        x: game.clientWidth
+    });
+    
+    const delay = Math.max(600, 1200 - level * 50);
+    spawnTimer = setTimeout(spawnObstacle, delay);
+    spawnPowerup();
+}
+
+/* =========================
+   GAME LOOP
+========================= */
+function gameLoop() {
+    if (!playing) return;
+    
+    const multiplier = slowMode ? 0.5 : 1;
+    score += 0.1 * bonusMultiplier * multiplier;
+    
+    level = Math.floor(score / 200) + 1;
+    speed = (7 + Math.floor(score / 100)) * multiplier;
+    
+    scoreText.innerText = "⭐ " + Math.floor(score);
+    levelText.innerText = "📊 Nível: " + level;
+    
+    updateLevelBackground();
+    
+    /* MOVIMENTAR OBSTÁCULOS */
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+        let obstacle = obstacles[i];
+        obstacle.x -= speed;
+        obstacle.element.style.left = obstacle.x + "px";
+        
+        if (checkCollision(player, obstacle.element)) {
+            if (hasShield) {
+                obstacle.element.remove();
+                obstacles.splice(i, 1);
+                hasShield = false;
+                player.classList.remove("shield");
+                showMessage("🛡️ Escudo usado!");
+                combo = 0;
+            } else {
+                gameOver();
+                return;
+            }
+        }
+        
+        if (obstacle.x < -100) {
+            obstacle.element.remove();
+            obstacles.splice(i, 1);
+            combo++;
+            maxCombo = Math.max(maxCombo, combo);
+            updateCombo();
+        }
+    }
+    
+    /* MOVIMENTAR POWER-UPS */
+    for (let i = powerups.length - 1; i >= 0; i--) {
+        let powerup = powerups[i];
+        powerup.x -= speed;
+        powerup.element.style.left = powerup.x + "px";
+        
+        if (checkCollision(player, powerup.element)) {
+            activatePowerup(powerup.type);
+            powerup.element.remove();
+            powerups.splice(i, 1);
+            score += 50;
+        }
+        
+        if (powerup.x < -100) {
+            powerup.element.remove();
+            powerups.splice(i, 1);
+        }
+    }
+    
+    animationId = requestAnimationFrame(gameLoop);
+}
+
+function updateLevelBackground() {
+    game.classList.remove("level2", "level3");
+    if (level >= 3) game.classList.add("level3");
+    else if (level >= 2) game.classList.add("level2");
+}
+
+function updateCombo() {
+    if (combo >= 3) {
+        comboText.classList.add("active");
+        comboText.innerText = "🔥 COMBO x" + combo;
+    }
+}
+
+/* =========================
+   COLISÃO
+========================= */
+function checkCollision(playerElement, obstacleElement) {
+    const p = playerElement.getBoundingClientRect();
+    const o = obstacleElement.getBoundingClientRect();
+    const padding = 12;
+    
+    return (
+        p.right - padding > o.left &&
+        p.left + padding < o.right &&
+        p.bottom - padding > o.top &&
+        p.top + padding < o.bottom
+    );
+}
+
+/* =========================
+   GAME OVER
+========================= */
+function gameOver() {
+    playing = false;
+    clearTimeout(spawnTimer);
+    clearTimeout(shieldTimer);
+    clearTimeout(slowTimer);
+    cancelAnimationFrame(animationId);
+    
+    player.style.transform = "translateY(0px)";
+    
+    const finalScore = Math.floor(score);
+    
+    if (finalScore > stats.bestScore) {
+        stats.bestScore = finalScore;
+        localStorage.setItem("jumpBest", stats.bestScore);
+    }
+    
+    stats.totalScore += finalScore;
+    localStorage.setItem("totalScore", stats.totalScore);
+    
+    if (combo > stats.bestStreak) {
+        stats.bestStreak = combo;
+        localStorage.setItem("bestStreak", stats.bestStreak);
+    }
+    
+    updateStatsDisplay();
+    document.getElementById("bestStreak").innerText = stats.bestStreak;
+    document.getElementById("totalGames").innerText = stats.totalGames;
+    
+    menu.style.display = "flex";
+    
+    document.querySelector(".menu-box h1").innerText = "💀 GAME OVER";
+    document.querySelector(".menu-box p").innerHTML =
+        "Nível atingido: <b>" + level + "</b><br>" +
+        "Pontuação: <b>" + finalScore + "</b><br>" +
+        "Melhor Combo: <b>" + maxCombo + "</b><br><br>" +
+        "Tente sobreviver mais tempo!";
+    
+    startButton.innerText = "🔄 JOGAR NOVAMENTE";
+}
+
+/* =========================
+   MENSAGENS
+========================= */
+function showMessage(text) {
+    const msg = document.createElement("div");
+    msg.id = "message";
+    msg.innerText = text;
+    game.appendChild(msg);
+    
+    setTimeout(() => msg.remove(), 600);
+}
+
+/* =========================
+   CONTROLES
+========================= */
+jumpButton.addEventListener("touchstart", (e) => {
+    e.preventDefault();
+    jump();
+}, { passive: false });
+
+jumpButton.addEventListener("click", jump);
+
+game.addEventListener("touchstart", (e) => {
+    if (e.target !== startButton && e.target !== jumpButton) {
+        jump();
+    }
+}, { passive: true });
+
+document.addEventListener("keydown", (e) => {
+    if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") {
+        e.preventDefault();
+        jump();
+    }
+});
+
+</script>
+
+</body>
+</html>
